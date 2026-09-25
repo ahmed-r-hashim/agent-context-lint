@@ -1,15 +1,70 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fixFile } from './fixer.js';
 import { lint } from './index.js';
 import { formatJson, formatText } from './reporter.js';
-import type { CLIOptions } from './types.js';
+import { CONTEXT_FILE_NAMES, isAgentFile, type CLIOptions } from './types.js';
 
 function getVersion(): string {
   const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
   return pkg.version;
+}
+
+const GLOB_CHARS = /[*?[\]]/;
+const SKIP_DIRS = new Set(['node_modules', '.git']);
+const CONTEXT_BASENAMES = new Set(CONTEXT_FILE_NAMES.map((name) => basename(name)));
+
+function isContextFileName(name: string): boolean {
+  return isAgentFile(name) || CONTEXT_BASENAMES.has(name);
+}
+
+function globToRegExp(pattern: string): RegExp {
+  let source = '';
+  for (const ch of pattern) {
+    if (ch === '*') source += '[^/\\\\]*';
+    else if (ch === '?') source += '[^/\\\\]';
+    else source += ch.replace(/[.+^${}()|\\]/g, '\\$&');
+  }
+  return new RegExp(`^${source}$`);
+}
+
+function walkDir(dir: string): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (SKIP_DIRS.has(entry.name)) continue;
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...walkDir(fullPath));
+    } else if (isContextFileName(entry.name)) {
+      found.push(fullPath);
+    }
+  }
+  return found;
+}
+
+// Expands a CLI arg into concrete file paths: directories are walked recursively
+// for recognized context files, simple globs (*, ?) are matched against their
+// containing directory (for shells like PowerShell/cmd that don't expand globs
+// themselves), and anything else is returned as-is.
+function expandFileArg(cwd: string, arg: string): string[] {
+  const resolved = resolve(cwd, arg);
+
+  if (GLOB_CHARS.test(arg)) {
+    const dir = dirname(resolved);
+    const pattern = globToRegExp(basename(resolved));
+    if (!existsSync(dir)) return [];
+    return readdirSync(dir)
+      .filter((name) => pattern.test(name))
+      .map((name) => join(dir, name));
+  }
+
+  if (existsSync(resolved) && statSync(resolved).isDirectory()) {
+    return walkDir(resolved);
+  }
+
+  return [resolved];
 }
 
 function getGitHubActionInputs(): CLIOptions | null {
@@ -67,6 +122,8 @@ function printHelp(): void {
   Usage:
     npx agent-context-lint              Auto-discover and lint all context files
     npx agent-context-lint CLAUDE.md    Lint a specific file
+    npx agent-context-lint ./agents     Lint a directory of custom-agent files
+    npx agent-context-lint ./agents/*.md  Lint files matching a glob
     npx agent-context-lint --format json  Machine-readable output for CI
     npx agent-context-lint --fix CLAUDE.md  Auto-fix safe issues then lint
 
@@ -94,14 +151,11 @@ function printHelp(): void {
 
 function main(): void {
   const options = getGitHubActionInputs() || parseArgs(process.argv);
+  const expandedFiles = options.files.flatMap((f) => expandFileArg(options.cwd, f));
 
   // Run fix before lint if requested
   if (options.fix) {
-    const filesToFix = options.files.length > 0
-      ? options.files.map((f) => resolve(options.cwd, f))
-      : [];
-
-    for (const file of filesToFix) {
+    for (const file of expandedFiles) {
       const fixResult = fixFile(file);
       if (fixResult.fixed) {
         console.log(`Fixed ${file}:`);
@@ -115,7 +169,7 @@ function main(): void {
 
   const result = lint(
     options.cwd,
-    options.files.length > 0 ? options.files : undefined,
+    expandedFiles.length > 0 ? expandedFiles : undefined,
   );
 
   if (result.files.length === 0) {

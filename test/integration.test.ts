@@ -120,7 +120,7 @@ describe('lint (agent.md)', () => {
 
   it('flags a missing description via explicit path lint', () => {
     const dir = setup({
-      'agents/agile-coach.agent.md': ['---', 'name: "Agile Jira Coach"', '---', '', 'Body'].join('\n'),
+      'agents/agile-coach.agent.md': ['---', 'name: "Agile Coach"', '---', '', 'Body'].join('\n'),
     });
     try {
       const result = lint(dir, ['agents/agile-coach.agent.md']);

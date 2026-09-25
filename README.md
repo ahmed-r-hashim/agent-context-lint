@@ -58,13 +58,14 @@ Each file gets a **0–100 quality score** based on findings.
 ## CLI options
 
 ```
-npx agent-context-lint                    # auto-discover and lint all context files
-npx agent-context-lint CLAUDE.md          # lint a specific file
-npx agent-context-lint ./agents/agile-coach.agent.md  # lint a custom-agent file
-npx agent-context-lint --format json      # machine-readable output for CI
-npx agent-context-lint --json             # shorthand for --format json
-npx agent-context-lint --fix CLAUDE.md    # auto-fix safe issues then lint
-npx agent-context-lint -V                 # show version
+npx agent-context-lint                      # auto-discover and lint all context files
+npx agent-context-lint CLAUDE.md            # lint a specific file
+npx agent-context-lint ./agents/my.agent.md # lint a custom-agent file
+npx agent-context-lint ./agents/*.md        # lint files matching a glob (works even on PowerShell/cmd)
+npx agent-context-lint --format json        # machine-readable output for CI
+npx agent-context-lint --json               # shorthand for --format json
+npx agent-context-lint --fix CLAUDE.md      # auto-fix safe issues then lint
+npx agent-context-lint -V                   # show version
 ```
 
 Exit code 1 on any error (CI-compatible).

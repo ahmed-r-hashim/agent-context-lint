@@ -432,7 +432,7 @@ describe('checkAgentFrontmatter', () => {
 
   it('flags missing description field', () => {
     const dir = setup({
-      'agile-coach.agent.md': ['---', 'name: "Agile Jira Coach"', '---', '', 'Body'].join('\n'),
+      'agile-coach.agent.md': ['---', 'name: "Agile Coach"', '---', '', 'Body'].join('\n'),
     });
     try {
       const filePath = join(dir, 'agile-coach.agent.md');

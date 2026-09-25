@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // src/cli.ts
-import { readFileSync as readFileSync5 } from "fs";
-import { dirname as dirname2, join, resolve as resolve5 } from "path";
+import { existsSync as existsSync4, readFileSync as readFileSync5, readdirSync as readdirSync2, statSync } from "fs";
+import { basename, dirname as dirname2, join, resolve as resolve5 } from "path";
 import { fileURLToPath } from "url";
 
 // src/fixer.ts
@@ -725,6 +725,47 @@ function getVersion() {
   const pkg = JSON.parse(readFileSync5(pkgPath, "utf-8"));
   return pkg.version;
 }
+var GLOB_CHARS = /[*?[\]]/;
+var SKIP_DIRS = /* @__PURE__ */ new Set(["node_modules", ".git"]);
+var CONTEXT_BASENAMES = new Set(CONTEXT_FILE_NAMES.map((name) => basename(name)));
+function isContextFileName(name) {
+  return isAgentFile(name) || CONTEXT_BASENAMES.has(name);
+}
+function globToRegExp(pattern) {
+  let source = "";
+  for (const ch of pattern) {
+    if (ch === "*") source += "[^/\\\\]*";
+    else if (ch === "?") source += "[^/\\\\]";
+    else source += ch.replace(/[.+^${}()|\\]/g, "\\$&");
+  }
+  return new RegExp(`^${source}$`);
+}
+function walkDir(dir) {
+  const found = [];
+  for (const entry of readdirSync2(dir, { withFileTypes: true })) {
+    if (SKIP_DIRS.has(entry.name)) continue;
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...walkDir(fullPath));
+    } else if (isContextFileName(entry.name)) {
+      found.push(fullPath);
+    }
+  }
+  return found;
+}
+function expandFileArg(cwd, arg) {
+  const resolved = resolve5(cwd, arg);
+  if (GLOB_CHARS.test(arg)) {
+    const dir = dirname2(resolved);
+    const pattern = globToRegExp(basename(resolved));
+    if (!existsSync4(dir)) return [];
+    return readdirSync2(dir).filter((name) => pattern.test(name)).map((name) => join(dir, name));
+  }
+  if (existsSync4(resolved) && statSync(resolved).isDirectory()) {
+    return walkDir(resolved);
+  }
+  return [resolved];
+}
 function getGitHubActionInputs() {
   if (process.env.GITHUB_ACTIONS !== "true") return null;
   const files = (process.env.INPUT_FILES || "").split(/\s+/).filter(Boolean);
@@ -774,6 +815,8 @@ function printHelp() {
   Usage:
     npx agent-context-lint              Auto-discover and lint all context files
     npx agent-context-lint CLAUDE.md    Lint a specific file
+    npx agent-context-lint ./agents     Lint a directory of custom-agent files
+    npx agent-context-lint ./agents/*.md  Lint files matching a glob
     npx agent-context-lint --format json  Machine-readable output for CI
     npx agent-context-lint --fix CLAUDE.md  Auto-fix safe issues then lint
 
@@ -800,9 +843,9 @@ function printHelp() {
 }
 function main() {
   const options = getGitHubActionInputs() || parseArgs(process.argv);
+  const expandedFiles = options.files.flatMap((f) => expandFileArg(options.cwd, f));
   if (options.fix) {
-    const filesToFix = options.files.length > 0 ? options.files.map((f) => resolve5(options.cwd, f)) : [];
-    for (const file of filesToFix) {
+    for (const file of expandedFiles) {
       const fixResult = fixFile(file);
       if (fixResult.fixed) {
         console.log(`Fixed ${file}:`);
@@ -815,7 +858,7 @@ function main() {
   }
   const result = lint(
     options.cwd,
-    options.files.length > 0 ? options.files : void 0
+    expandedFiles.length > 0 ? expandedFiles : void 0
   );
   if (result.files.length === 0) {
     console.log("No context files found.");

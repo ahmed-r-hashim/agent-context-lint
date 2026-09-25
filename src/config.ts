@@ -41,5 +41,7 @@ function mergeConfig(overrides: Partial<Config>): Config {
     staleDateYears: overrides.staleDateYears ?? DEFAULT_CONFIG.staleDateYears,
     vaguePatterns: overrides.vaguePatterns ?? DEFAULT_CONFIG.vaguePatterns,
     ignore: overrides.ignore ?? DEFAULT_CONFIG.ignore,
+    agentDescriptionMinLength:
+      overrides.agentDescriptionMinLength ?? DEFAULT_CONFIG.agentDescriptionMinLength,
   };
 }

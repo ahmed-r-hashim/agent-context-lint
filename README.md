@@ -2,7 +2,7 @@
 
 Lint AI coding agent context files for staleness, broken paths, and semantic quality issues.
 
-Supports **CLAUDE.md**, **AGENTS.md**, **.cursorrules**, and **copilot-instructions.md**.
+Supports **CLAUDE.md**, **AGENTS.md**, **.cursorrules**, **copilot-instructions.md**, and **`*.agent.md`** custom-agent files (auto-discovered from `.github/agents/`).
 
 ## Quickstart
 
@@ -38,6 +38,7 @@ No existing tool does both structural validation (do referenced paths and script
 | `check:token-budget` | warn/error | Files exceeding token thresholds (warn: 2,000, error: 5,000) |
 | `check:vague` | warning | Vague instructions like "follow best practices" or "use good judgment" |
 | `check:required-sections` | warning | Missing recommended sections (Setup, Testing, Build) |
+| `check:agent-frontmatter` | error/warning | `.agent.md` files missing frontmatter, missing `description`, or a vague/too-short description |
 | `check:stale-dates` | warning | Year references older than 2 years |
 | `check:contradictions` | warning | Contradictory directives ("always use X" + "never use X") |
 
@@ -59,6 +60,7 @@ Each file gets a **0–100 quality score** based on findings.
 ```
 npx agent-context-lint                    # auto-discover and lint all context files
 npx agent-context-lint CLAUDE.md          # lint a specific file
+npx agent-context-lint ./agents/agile-coach.agent.md  # lint a custom-agent file
 npx agent-context-lint --format json      # machine-readable output for CI
 npx agent-context-lint --json             # shorthand for --format json
 npx agent-context-lint --fix CLAUDE.md    # auto-fix safe issues then lint
@@ -84,7 +86,8 @@ Create `.agent-context-lint.json` in your project root, or add an `agentContextL
   "requiredSections": ["Setup", "Testing", "Build"],
   "staleDateYears": 2,
   "vaguePatterns": ["follow best practices", "be careful", "use good judgment"],
-  "ignore": []
+  "ignore": [],
+  "agentDescriptionMinLength": 20
 }
 ```
 

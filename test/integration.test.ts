@@ -95,3 +95,42 @@ describe('lint (integration)', () => {
     }
   });
 });
+
+describe('lint (agent.md)', () => {
+  it('runs check:agent-frontmatter instead of check:required-sections', () => {
+    const dir = setup({
+      '.github/agents/agile-coach.agent.md': [
+        '---',
+        'description: "Use when: agile coaching, sprint health, backlog audit"',
+        '---',
+        '',
+        'You are an agile coach.',
+      ].join('\n'),
+    });
+    try {
+      const result = lint(dir);
+      expect(result.files).toHaveLength(1);
+      const rules = result.files[0].findings.map((f) => f.rule);
+      expect(rules).not.toContain('check:required-sections');
+      expect(rules).not.toContain('check:agent-frontmatter');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('flags a missing description via explicit path lint', () => {
+    const dir = setup({
+      'agents/agile-coach.agent.md': ['---', 'name: "Agile Jira Coach"', '---', '', 'Body'].join('\n'),
+    });
+    try {
+      const result = lint(dir, ['agents/agile-coach.agent.md']);
+      expect(result.files).toHaveLength(1);
+      const rules = result.files[0].findings.map((f) => f.rule);
+      expect(rules).toContain('check:agent-frontmatter');
+      expect(rules).not.toContain('check:required-sections');
+    } finally {
+      cleanup();
+    }
+  });
+});
+

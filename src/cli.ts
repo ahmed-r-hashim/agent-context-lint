@@ -1,8 +1,16 @@
-import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { fixFile } from './fixer.js';
 import { lint } from './index.js';
 import { formatJson, formatText } from './reporter.js';
 import type { CLIOptions } from './types.js';
+
+function getVersion(): string {
+  const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+  return pkg.version;
+}
 
 function getGitHubActionInputs(): CLIOptions | null {
   if (process.env.GITHUB_ACTIONS !== 'true') return null;
@@ -42,7 +50,7 @@ function parseArgs(argv: string[]): CLIOptions {
       printHelp();
       process.exit(0);
     } else if (arg === '--version' || arg === '-V') {
-      console.log('0.1.1');
+      console.log(getVersion());
       process.exit(0);
     } else if (!arg.startsWith('-')) {
       options.files.push(arg);

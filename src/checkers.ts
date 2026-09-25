@@ -159,6 +159,80 @@ export function checkRequiredSections(
   return findings;
 }
 
+function stripQuotes(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+export function checkAgentFrontmatter(
+  parsed: ParsedFile,
+  filePath: string,
+  config: Config,
+): LintFinding[] {
+  const findings: LintFinding[] = [];
+  const { frontmatter } = parsed;
+
+  if (!frontmatter) {
+    findings.push({
+      file: filePath,
+      rule: 'check:agent-frontmatter',
+      line: 1,
+      column: 1,
+      severity: 'error',
+      message:
+        'Missing or malformed frontmatter block (expected `---`-delimited YAML at top of file)',
+    });
+    return findings;
+  }
+
+  const description = stripQuotes(frontmatter.fields.description ?? '');
+  if (!description) {
+    findings.push({
+      file: filePath,
+      rule: 'check:agent-frontmatter',
+      line: frontmatter.startLine,
+      column: 1,
+      severity: 'error',
+      message: 'Missing required frontmatter field: description',
+    });
+    return findings;
+  }
+
+  if (description.length < config.agentDescriptionMinLength) {
+    findings.push({
+      file: filePath,
+      rule: 'check:agent-frontmatter',
+      line: frontmatter.startLine,
+      column: 1,
+      severity: 'warning',
+      message: `Description is too short to aid subagent discovery: "${description}"`,
+    });
+  } else {
+    const lowerDescription = description.toLowerCase();
+    for (const pattern of config.vaguePatterns) {
+      if (lowerDescription.includes(pattern.toLowerCase())) {
+        findings.push({
+          file: filePath,
+          rule: 'check:agent-frontmatter',
+          line: frontmatter.startLine,
+          column: 1,
+          severity: 'warning',
+          message: `Vague description: "${description}"`,
+        });
+        break;
+      }
+    }
+  }
+
+  return findings;
+}
+
 export function checkStaleDates(
   parsed: ParsedFile,
   filePath: string,

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 // src/cli.ts
-import { resolve as resolve5 } from "path";
+import { readFileSync as readFileSync5 } from "fs";
+import { dirname as dirname2, join, resolve as resolve5 } from "path";
+import { fileURLToPath } from "url";
 
 // src/fixer.ts
 import { readFileSync, writeFileSync } from "fs";
@@ -156,6 +158,66 @@ function checkRequiredSections(parsed, filePath, config) {
         severity: "warning",
         message: `Missing recommended section: "${required}"`
       });
+    }
+  }
+  return findings;
+}
+function stripQuotes(value) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+function checkAgentFrontmatter(parsed, filePath, config) {
+  const findings = [];
+  const { frontmatter } = parsed;
+  if (!frontmatter) {
+    findings.push({
+      file: filePath,
+      rule: "check:agent-frontmatter",
+      line: 1,
+      column: 1,
+      severity: "error",
+      message: "Missing or malformed frontmatter block (expected `---`-delimited YAML at top of file)"
+    });
+    return findings;
+  }
+  const description = stripQuotes(frontmatter.fields.description ?? "");
+  if (!description) {
+    findings.push({
+      file: filePath,
+      rule: "check:agent-frontmatter",
+      line: frontmatter.startLine,
+      column: 1,
+      severity: "error",
+      message: "Missing required frontmatter field: description"
+    });
+    return findings;
+  }
+  if (description.length < config.agentDescriptionMinLength) {
+    findings.push({
+      file: filePath,
+      rule: "check:agent-frontmatter",
+      line: frontmatter.startLine,
+      column: 1,
+      severity: "warning",
+      message: `Description is too short to aid subagent discovery: "${description}"`
+    });
+  } else {
+    const lowerDescription = description.toLowerCase();
+    for (const pattern of config.vaguePatterns) {
+      if (lowerDescription.includes(pattern.toLowerCase())) {
+        findings.push({
+          file: filePath,
+          rule: "check:agent-frontmatter",
+          line: frontmatter.startLine,
+          column: 1,
+          severity: "warning",
+          message: `Vague description: "${description}"`
+        });
+        break;
+      }
     }
   }
   return findings;
@@ -386,7 +448,8 @@ var DEFAULT_CONFIG = {
     "use proper",
     "ensure quality"
   ],
-  ignore: []
+  ignore: [],
+  agentDescriptionMinLength: 20
 };
 var CONTEXT_FILE_NAMES = [
   "CLAUDE.md",
@@ -395,6 +458,11 @@ var CONTEXT_FILE_NAMES = [
   "copilot-instructions.md",
   ".github/copilot-instructions.md"
 ];
+var AGENT_FILE_SUFFIX = ".agent.md";
+var AGENT_AUTODISCOVER_DIR = ".github/agents";
+function isAgentFile(filePath) {
+  return filePath.endsWith(AGENT_FILE_SUFFIX);
+}
 
 // src/config.ts
 function loadConfig(cwd) {
@@ -427,12 +495,13 @@ function mergeConfig(overrides) {
     requiredSections: overrides.requiredSections ?? DEFAULT_CONFIG.requiredSections,
     staleDateYears: overrides.staleDateYears ?? DEFAULT_CONFIG.staleDateYears,
     vaguePatterns: overrides.vaguePatterns ?? DEFAULT_CONFIG.vaguePatterns,
-    ignore: overrides.ignore ?? DEFAULT_CONFIG.ignore
+    ignore: overrides.ignore ?? DEFAULT_CONFIG.ignore,
+    agentDescriptionMinLength: overrides.agentDescriptionMinLength ?? DEFAULT_CONFIG.agentDescriptionMinLength
   };
 }
 
 // src/discovery.ts
-import { existsSync as existsSync3 } from "fs";
+import { existsSync as existsSync3, readdirSync } from "fs";
 import { resolve as resolve3 } from "path";
 function discoverContextFiles(cwd) {
   const found = [];
@@ -440,6 +509,14 @@ function discoverContextFiles(cwd) {
     const fullPath = resolve3(cwd, name);
     if (existsSync3(fullPath)) {
       found.push(fullPath);
+    }
+  }
+  const agentsDir = resolve3(cwd, AGENT_AUTODISCOVER_DIR);
+  if (existsSync3(agentsDir)) {
+    for (const entry of readdirSync(agentsDir)) {
+      if (entry.endsWith(AGENT_FILE_SUFFIX)) {
+        found.push(resolve3(agentsDir, entry));
+      }
     }
   }
   return found;
@@ -453,9 +530,30 @@ var HEADING_PATTERN = /^#{1,6}\s+(.+)$/;
 var FENCED_BLOCK_START = /^```(\w*)/;
 var FENCED_BLOCK_END = /^```\s*$/;
 var INLINE_CODE_PATTERN = /`([^`]+)`/g;
+var FRONTMATTER_FIELD_PATTERN = /^([A-Za-z0-9_-]+):\s*(.*)$/;
+function parseFrontmatter(lines) {
+  if (lines[0]?.trim() !== "---") return void 0;
+  let endLine = -1;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === "---") {
+      endLine = i + 1;
+      break;
+    }
+  }
+  if (endLine === -1) return void 0;
+  const fields = {};
+  for (let i = 1; i < endLine - 1; i++) {
+    const match = FRONTMATTER_FIELD_PATTERN.exec(lines[i]);
+    if (match) {
+      fields[match[1]] = match[2].trim();
+    }
+  }
+  return { raw: lines.slice(0, endLine).join("\n"), startLine: 1, endLine, fields };
+}
 function parseFile(filePath) {
   const content = readFileSync4(filePath, "utf-8");
   const lines = content.split("\n");
+  const frontmatter = parseFrontmatter(lines);
   const paths = [];
   const commands = [];
   const sections = [];
@@ -525,7 +623,7 @@ function parseFile(filePath) {
       }
     }
   }
-  return { content, lines, paths, commands, sections, codeBlocks, inlineCode };
+  return { content, lines, paths, commands, sections, codeBlocks, inlineCode, frontmatter };
 }
 
 // src/scorer.ts
@@ -582,12 +680,13 @@ function formatJson(result, cwd) {
 function lintFile(filePath, cwd) {
   const config = loadConfig(cwd);
   const parsed = parseFile(filePath);
+  const agentFile = isAgentFile(filePath);
   const findings = [
     ...checkPaths(parsed, filePath),
     ...checkScripts(parsed, filePath),
     ...checkTokenBudget(parsed, filePath, config),
     ...checkVague(parsed, filePath, config),
-    ...checkRequiredSections(parsed, filePath, config),
+    ...agentFile ? checkAgentFrontmatter(parsed, filePath, config) : checkRequiredSections(parsed, filePath, config),
     ...checkStaleDates(parsed, filePath, config),
     ...checkContradictions(parsed, filePath),
     ...checkCommands(parsed, filePath),
@@ -621,6 +720,11 @@ function lint(cwd, files) {
 }
 
 // src/cli.ts
+function getVersion() {
+  const pkgPath = join(dirname2(fileURLToPath(import.meta.url)), "..", "package.json");
+  const pkg = JSON.parse(readFileSync5(pkgPath, "utf-8"));
+  return pkg.version;
+}
 function getGitHubActionInputs() {
   if (process.env.GITHUB_ACTIONS !== "true") return null;
   const files = (process.env.INPUT_FILES || "").split(/\s+/).filter(Boolean);
@@ -655,7 +759,7 @@ function parseArgs(argv) {
       printHelp();
       process.exit(0);
     } else if (arg === "--version" || arg === "-V") {
-      console.log("0.1.1");
+      console.log(getVersion());
       process.exit(0);
     } else if (!arg.startsWith("-")) {
       options.files.push(arg);

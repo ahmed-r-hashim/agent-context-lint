@@ -13,6 +13,7 @@ import {
   checkContradictions,
   checkCommands,
   checkImports,
+  checkAgentFrontmatter,
 } from '../src/checkers.js';
 import { DEFAULT_CONFIG } from '../src/types.js';
 
@@ -407,6 +408,95 @@ describe('checkImports', () => {
       const filePath = join(dir, 'CLAUDE.md');
       const parsed = parseFile(filePath);
       const findings = checkImports(parsed, filePath);
+      expect(findings).toHaveLength(0);
+    } finally {
+      cleanup();
+    }
+  });
+});
+
+describe('checkAgentFrontmatter', () => {
+  it('flags missing frontmatter block', () => {
+    const dir = setup({ 'agile-coach.agent.md': '# No frontmatter here\n' });
+    try {
+      const filePath = join(dir, 'agile-coach.agent.md');
+      const parsed = parseFile(filePath);
+      const findings = checkAgentFrontmatter(parsed, filePath, DEFAULT_CONFIG);
+      expect(findings).toHaveLength(1);
+      expect(findings[0].rule).toBe('check:agent-frontmatter');
+      expect(findings[0].severity).toBe('error');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('flags missing description field', () => {
+    const dir = setup({
+      'agile-coach.agent.md': ['---', 'name: "Agile Jira Coach"', '---', '', 'Body'].join('\n'),
+    });
+    try {
+      const filePath = join(dir, 'agile-coach.agent.md');
+      const parsed = parseFile(filePath);
+      const findings = checkAgentFrontmatter(parsed, filePath, DEFAULT_CONFIG);
+      expect(findings).toHaveLength(1);
+      expect(findings[0].severity).toBe('error');
+      expect(findings[0].message).toContain('description');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('warns on a too-short description', () => {
+    const dir = setup({
+      'agile-coach.agent.md': ['---', 'description: "Short"', '---', '', 'Body'].join('\n'),
+    });
+    try {
+      const filePath = join(dir, 'agile-coach.agent.md');
+      const parsed = parseFile(filePath);
+      const findings = checkAgentFrontmatter(parsed, filePath, DEFAULT_CONFIG);
+      expect(findings).toHaveLength(1);
+      expect(findings[0].severity).toBe('warning');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('warns on a vague description', () => {
+    const dir = setup({
+      'agile-coach.agent.md': [
+        '---',
+        'description: "Use good judgment when helping with agile coaching"',
+        '---',
+        '',
+        'Body',
+      ].join('\n'),
+    });
+    try {
+      const filePath = join(dir, 'agile-coach.agent.md');
+      const parsed = parseFile(filePath);
+      const findings = checkAgentFrontmatter(parsed, filePath, DEFAULT_CONFIG);
+      expect(findings).toHaveLength(1);
+      expect(findings[0].severity).toBe('warning');
+      expect(findings[0].message).toContain('Vague description');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('passes for a well-formed, specific description', () => {
+    const dir = setup({
+      'agile-coach.agent.md': [
+        '---',
+        'description: "Use when: agile coaching, sprint health, backlog audit"',
+        '---',
+        '',
+        'Body',
+      ].join('\n'),
+    });
+    try {
+      const filePath = join(dir, 'agile-coach.agent.md');
+      const parsed = parseFile(filePath);
+      const findings = checkAgentFrontmatter(parsed, filePath, DEFAULT_CONFIG);
       expect(findings).toHaveLength(0);
     } finally {
       cleanup();

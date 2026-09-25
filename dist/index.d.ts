@@ -32,6 +32,13 @@ interface Config {
     staleDateYears: number;
     vaguePatterns: string[];
     ignore: string[];
+    agentDescriptionMinLength: number;
+}
+interface Frontmatter {
+    raw: string;
+    startLine: number;
+    endLine: number;
+    fields: Record<string, string>;
 }
 
 declare function discoverContextFiles(cwd: string): string[];
@@ -44,6 +51,7 @@ interface ParsedFile {
     sections: string[];
     codeBlocks: CodeBlock[];
     inlineCode: InlineCode[];
+    frontmatter?: Frontmatter;
 }
 interface PathReference {
     value: string;

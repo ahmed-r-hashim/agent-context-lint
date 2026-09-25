@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 import {
+  checkAgentFrontmatter,
   checkCommands,
   checkContradictions,
   checkImports,
@@ -14,6 +15,7 @@ import { loadConfig } from './config.js';
 import { discoverContextFiles } from './discovery.js';
 import { parseFile } from './parser.js';
 import { computeScore } from './scorer.js';
+import { isAgentFile } from './types.js';
 import type { FileResult, LintFinding, LintResult } from './types.js';
 
 export type { CLIOptions, Config, FileResult, LintFinding, LintResult } from './types.js';
@@ -28,13 +30,16 @@ export type { FixResult, FixChange } from './fixer.js';
 export function lintFile(filePath: string, cwd: string): FileResult {
   const config = loadConfig(cwd);
   const parsed = parseFile(filePath);
+  const agentFile = isAgentFile(filePath);
 
   const findings: LintFinding[] = [
     ...checkPaths(parsed, filePath),
     ...checkScripts(parsed, filePath),
     ...checkTokenBudget(parsed, filePath, config),
     ...checkVague(parsed, filePath, config),
-    ...checkRequiredSections(parsed, filePath, config),
+    ...(agentFile
+      ? checkAgentFrontmatter(parsed, filePath, config)
+      : checkRequiredSections(parsed, filePath, config)),
     ...checkStaleDates(parsed, filePath, config),
     ...checkContradictions(parsed, filePath),
     ...checkCommands(parsed, filePath),

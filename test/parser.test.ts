@@ -77,6 +77,41 @@ describe('parseFile', () => {
     }
   });
 
+  it('parses frontmatter fields', () => {
+    const f = setup(
+      ['---', 'description: "Use when: doing X"', 'tools: [read, search]', '---', '', 'Body text'].join('\n'),
+    );
+    try {
+      const result = parseFile(f);
+      expect(result.frontmatter).toBeDefined();
+      expect(result.frontmatter?.fields.description).toBe('"Use when: doing X"');
+      expect(result.frontmatter?.fields.tools).toBe('[read, search]');
+      expect(result.frontmatter?.endLine).toBe(4);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('returns undefined frontmatter when file has no leading ---', () => {
+    const f = setup('# Heading\n\nBody text');
+    try {
+      const result = parseFile(f);
+      expect(result.frontmatter).toBeUndefined();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('returns undefined frontmatter when closing --- is missing', () => {
+    const f = setup(['---', 'description: unterminated', '', 'Body text'].join('\n'));
+    try {
+      const result = parseFile(f);
+      expect(result.frontmatter).toBeUndefined();
+    } finally {
+      cleanup();
+    }
+  });
+
   it('ignores URLs in path extraction', () => {
     const f = setup('See https://example.com/path/to/resource for more.');
     try {

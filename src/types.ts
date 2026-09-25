@@ -33,6 +33,16 @@ export interface Config {
   staleDateYears: number;
   vaguePatterns: string[];
   ignore: string[];
+  agentDescriptionMinLength: number;
+}
+
+// Top-level `key: value` pairs from a --- delimited YAML frontmatter block;
+// nested/indented structures (e.g. hooks) are not parsed.
+export interface Frontmatter {
+  raw: string;
+  startLine: number;
+  endLine: number;
+  fields: Record<string, string>;
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -55,6 +65,7 @@ export const DEFAULT_CONFIG: Config = {
     'ensure quality',
   ],
   ignore: [],
+  agentDescriptionMinLength: 20,
 };
 
 export const CONTEXT_FILE_NAMES = [
@@ -64,3 +75,10 @@ export const CONTEXT_FILE_NAMES = [
   'copilot-instructions.md',
   '.github/copilot-instructions.md',
 ];
+
+export const AGENT_FILE_SUFFIX = '.agent.md';
+export const AGENT_AUTODISCOVER_DIR = '.github/agents';
+
+export function isAgentFile(filePath: string): boolean {
+  return filePath.endsWith(AGENT_FILE_SUFFIX);
+}

@@ -63,4 +63,25 @@ describe('discoverContextFiles', () => {
       cleanup();
     }
   });
+
+  it('finds .github/agents/*.agent.md files', () => {
+    const dir = setup(['.github/agents/agile-coach.agent.md']);
+    try {
+      const files = discoverContextFiles(dir);
+      expect(files).toHaveLength(1);
+      expect(files[0]).toContain('agile-coach.agent.md');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('does not error when .github/agents does not exist', () => {
+    const dir = setup(['CLAUDE.md']);
+    try {
+      const files = discoverContextFiles(dir);
+      expect(files).toHaveLength(1);
+    } finally {
+      cleanup();
+    }
+  });
 });

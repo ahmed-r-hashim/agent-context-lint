@@ -96,6 +96,21 @@ describe('checkScripts', () => {
       cleanup();
     }
   });
+
+  it('skips script checks when package.json is invalid JSON', () => {
+    const dir = setup({
+      'CLAUDE.md': 'Run `npm run lint` to check.',
+      'package.json': '{ not valid json',
+    });
+    try {
+      const filePath = join(dir, 'CLAUDE.md');
+      const parsed = parseFile(filePath);
+      const findings = checkScripts(parsed, filePath);
+      expect(findings).toHaveLength(0);
+    } finally {
+      cleanup();
+    }
+  });
 });
 
 describe('checkTokenBudget', () => {

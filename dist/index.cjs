@@ -34,9 +34,20 @@ module.exports = __toCommonJS(index_exports);
 var import_node_path5 = require("path");
 
 // src/checkers.ts
-var import_node_child_process = require("child_process");
 var import_node_fs = require("fs");
 var import_node_path = require("path");
+function commandExists(cmd) {
+  const pathEnv = process.env.PATH || process.env.Path || "";
+  const dirs = pathEnv.split(import_node_path.delimiter).filter(Boolean);
+  const exts = process.platform === "win32" ? (process.env.PATHEXT || ".EXE;.CMD;.BAT;.COM").split(";") : [""];
+  for (const dir of dirs) {
+    for (const ext of exts) {
+      const candidate = cmd.toLowerCase().endsWith(ext.toLowerCase()) ? (0, import_node_path.join)(dir, cmd) : (0, import_node_path.join)(dir, cmd + ext);
+      if ((0, import_node_fs.existsSync)(candidate)) return true;
+    }
+  }
+  return false;
+}
 function checkPaths(parsed, filePath) {
   const findings = [];
   const baseDir = (0, import_node_path.dirname)(filePath);
@@ -351,12 +362,7 @@ function checkCommands(parsed, filePath) {
       if (!cmd || SHELL_BUILTINS.has(cmd)) continue;
       if (/^[A-Z_]+=/.test(cmd)) continue;
       if (!cache.has(cmd)) {
-        try {
-          (0, import_node_child_process.execFileSync)("which", [cmd], { stdio: "pipe" });
-          cache.set(cmd, true);
-        } catch {
-          cache.set(cmd, false);
-        }
+        cache.set(cmd, commandExists(cmd));
       }
       if (!cache.get(cmd)) {
         findings.push({

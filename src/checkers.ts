@@ -1,8 +1,29 @@
-import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import type { ParsedFile } from './parser.js';
 import type { Config, LintFinding } from './types.js';
+
+// Checks whether `cmd` resolves to an executable on PATH, without spawning a
+// subprocess. On Windows, candidate extensions come from PATHEXT (falling
+// back to the common defaults); on POSIX, the bare name is checked as-is.
+function commandExists(cmd: string): boolean {
+  const pathEnv = process.env.PATH || process.env.Path || '';
+  const dirs = pathEnv.split(delimiter).filter(Boolean);
+  const exts =
+    process.platform === 'win32'
+      ? (process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
+      : [''];
+
+  for (const dir of dirs) {
+    for (const ext of exts) {
+      const candidate = cmd.toLowerCase().endsWith(ext.toLowerCase())
+        ? join(dir, cmd)
+        : join(dir, cmd + ext);
+      if (existsSync(candidate)) return true;
+    }
+  }
+  return false;
+}
 
 export function checkPaths(
   parsed: ParsedFile,
@@ -367,12 +388,7 @@ export function checkCommands(
       if (/^[A-Z_]+=/.test(cmd)) continue;
 
       if (!cache.has(cmd)) {
-        try {
-          execFileSync('which', [cmd], { stdio: 'pipe' });
-          cache.set(cmd, true);
-        } catch {
-          cache.set(cmd, false);
-        }
+        cache.set(cmd, commandExists(cmd));
       }
 
       if (!cache.get(cmd)) {

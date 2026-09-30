@@ -2,9 +2,20 @@
 import { resolve as resolve4 } from "path";
 
 // src/checkers.ts
-import { execFileSync } from "child_process";
 import { existsSync, readFileSync } from "fs";
-import { dirname, resolve } from "path";
+import { delimiter, dirname, join, resolve } from "path";
+function commandExists(cmd) {
+  const pathEnv = process.env.PATH || process.env.Path || "";
+  const dirs = pathEnv.split(delimiter).filter(Boolean);
+  const exts = process.platform === "win32" ? (process.env.PATHEXT || ".EXE;.CMD;.BAT;.COM").split(";") : [""];
+  for (const dir of dirs) {
+    for (const ext of exts) {
+      const candidate = cmd.toLowerCase().endsWith(ext.toLowerCase()) ? join(dir, cmd) : join(dir, cmd + ext);
+      if (existsSync(candidate)) return true;
+    }
+  }
+  return false;
+}
 function checkPaths(parsed, filePath) {
   const findings = [];
   const baseDir = dirname(filePath);
@@ -319,12 +330,7 @@ function checkCommands(parsed, filePath) {
       if (!cmd || SHELL_BUILTINS.has(cmd)) continue;
       if (/^[A-Z_]+=/.test(cmd)) continue;
       if (!cache.has(cmd)) {
-        try {
-          execFileSync("which", [cmd], { stdio: "pipe" });
-          cache.set(cmd, true);
-        } catch {
-          cache.set(cmd, false);
-        }
+        cache.set(cmd, commandExists(cmd));
       }
       if (!cache.get(cmd)) {
         findings.push({

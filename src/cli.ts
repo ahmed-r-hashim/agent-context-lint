@@ -1,82 +1,3 @@
-<<<<<<< Updated upstream
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-=======
-<<<<<<< Updated upstream
-import { resolve } from 'node:path';
->>>>>>> Stashed changes
-import { fixFile } from './fixer.js';
-import { lint } from './index.js';
-import { formatJson, formatText } from './reporter.js';
-import { CONTEXT_FILE_NAMES, isAgentFile, type CLIOptions } from './types.js';
-
-function getVersion(): string {
-  const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-  return pkg.version;
-}
-
-const GLOB_CHARS = /[*?[\]]/;
-const SKIP_DIRS = new Set(['node_modules', '.git']);
-const CONTEXT_BASENAMES = new Set(CONTEXT_FILE_NAMES.map((name) => basename(name)));
-
-function isContextFileName(name: string): boolean {
-  return isAgentFile(name) || CONTEXT_BASENAMES.has(name);
-}
-
-function globToRegExp(pattern: string): RegExp {
-  let source = '';
-  for (const ch of pattern) {
-    if (ch === '*') source += '[^/\\\\]*';
-    else if (ch === '?') source += '[^/\\\\]';
-    else source += ch.replace(/[.+^${}()|\\]/g, '\\$&');
-  }
-  return new RegExp(`^${source}$`);
-}
-
-function walkDir(dir: string): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (SKIP_DIRS.has(entry.name)) continue;
-    const fullPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      found.push(...walkDir(fullPath));
-    } else if (isContextFileName(entry.name)) {
-      found.push(fullPath);
-    }
-  }
-  return found;
-}
-
-// Expands a CLI arg into concrete file paths: directories are walked recursively
-// for recognized context files, simple globs (*, ?) are matched against their
-// containing directory (for shells like PowerShell/cmd that don't expand globs
-// themselves), and anything else is returned as-is.
-function expandFileArg(cwd: string, arg: string): string[] {
-  const resolved = resolve(cwd, arg);
-
-  if (GLOB_CHARS.test(arg)) {
-    const dir = dirname(resolved);
-    const pattern = globToRegExp(basename(resolved));
-    if (!existsSync(dir)) return [];
-    return readdirSync(dir)
-      .filter((name) => pattern.test(name))
-      .map((name) => join(dir, name));
-  }
-
-  if (existsSync(resolved) && statSync(resolved).isDirectory()) {
-    return walkDir(resolved);
-  }
-
-  return [resolved];
-}
-
-function getGitHubActionInputs(): CLIOptions | null {
-<<<<<<< Updated upstream
-=======
-  if (process.env.GITHUB_ACTIONS !== 'true') return null;
-=======
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -147,7 +68,6 @@ export function expandFileArg(cwd: string, arg: string): string[] {
 }
 
 export function getGitHubActionInputs(): CLIOptions | null {
->>>>>>> Stashed changes
   // GITHUB_ACTIONS is 'true' for every step in a GitHub Actions job, including
   // plain `run:` steps that invoke this CLI directly (e.g. via npx). That is
   // not a reliable signal that we're being invoked as the packaged action.
@@ -156,10 +76,6 @@ export function getGitHubActionInputs(): CLIOptions | null {
   // distinguishes "running as the packaged GitHub Action" from "running as a
   // plain CLI inside some Actions job".
   if (!process.env.GITHUB_ACTION_PATH) return null;
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
   const files = (process.env.INPUT_FILES || '').split(/\s+/).filter(Boolean);
   const format = process.env.INPUT_FORMAT === 'json' ? 'json' as const : 'text' as const;

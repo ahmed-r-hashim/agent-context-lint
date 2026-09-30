@@ -1,19 +1,9 @@
 #!/usr/bin/env node
 
 // src/cli.ts
-<<<<<<< Updated upstream
-import { existsSync as existsSync4, readFileSync as readFileSync5, readdirSync as readdirSync2, statSync } from "fs";
-import { basename, dirname as dirname2, join, resolve as resolve5 } from "path";
-import { fileURLToPath } from "url";
-=======
-<<<<<<< Updated upstream
-import { resolve as resolve5 } from "path";
-=======
 import { existsSync as existsSync4, readFileSync as readFileSync5, readdirSync as readdirSync2, statSync } from "fs";
 import { basename, dirname as dirname2, join as join2, resolve as resolve5 } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
 // src/fixer.ts
 import { readFileSync, writeFileSync } from "fs";
@@ -741,15 +731,8 @@ function lint(cwd, files) {
 }
 
 // src/cli.ts
-<<<<<<< Updated upstream
-function getVersion() {
-  const pkgPath = join(dirname2(fileURLToPath(import.meta.url)), "..", "package.json");
-=======
-<<<<<<< Updated upstream
-=======
 function getVersion() {
   const pkgPath = join2(dirname2(fileURLToPath(import.meta.url)), "..", "package.json");
->>>>>>> Stashed changes
   const pkg = JSON.parse(readFileSync5(pkgPath, "utf-8"));
   return pkg.version;
 }
@@ -772,11 +755,7 @@ function walkDir(dir) {
   const found = [];
   for (const entry of readdirSync2(dir, { withFileTypes: true })) {
     if (SKIP_DIRS.has(entry.name)) continue;
-<<<<<<< Updated upstream
-    const fullPath = join(dir, entry.name);
-=======
     const fullPath = join2(dir, entry.name);
->>>>>>> Stashed changes
     if (entry.isDirectory()) {
       found.push(...walkDir(fullPath));
     } else if (isContextFileName(entry.name)) {
@@ -791,21 +770,13 @@ function expandFileArg(cwd, arg) {
     const dir = dirname2(resolved);
     const pattern = globToRegExp(basename(resolved));
     if (!existsSync4(dir)) return [];
-<<<<<<< Updated upstream
-    return readdirSync2(dir).filter((name) => pattern.test(name)).map((name) => join(dir, name));
-=======
     return readdirSync2(dir).filter((name) => pattern.test(name)).map((name) => join2(dir, name));
->>>>>>> Stashed changes
   }
   if (existsSync4(resolved) && statSync(resolved).isDirectory()) {
     return walkDir(resolved);
   }
   return [resolved];
 }
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 function getGitHubActionInputs() {
   if (!process.env.GITHUB_ACTION_PATH) return null;
   const files = (process.env.INPUT_FILES || "").split(/\s+/).filter(Boolean);

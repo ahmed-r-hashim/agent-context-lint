@@ -63,11 +63,6 @@ describe('discoverContextFiles', () => {
       cleanup();
     }
   });
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
 
   it('finds .github/agents/*.agent.md files', () => {
     const dir = setup(['.github/agents/agile-coach.agent.md']);
@@ -115,8 +110,6 @@ describe('discoverContextFiles', () => {
     }
   });
 
-<<<<<<< Updated upstream
-=======
   it('dedupes a file reachable via two overlapping agentDirs entries', () => {
     const dir = setup(['agents/dup.agent.md']);
     try {
@@ -127,7 +120,6 @@ describe('discoverContextFiles', () => {
     }
   });
 
->>>>>>> Stashed changes
   it('does not error when .github/agents does not exist', () => {
     const dir = setup(['CLAUDE.md']);
     try {
@@ -137,8 +129,4 @@ describe('discoverContextFiles', () => {
       cleanup();
     }
   });
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 });

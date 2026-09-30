@@ -33,6 +33,7 @@ interface Config {
     vaguePatterns: string[];
     ignore: string[];
     agentDescriptionMinLength: number;
+    agentDirs: string[];
 }
 interface Frontmatter {
     raw: string;
@@ -41,7 +42,7 @@ interface Frontmatter {
     fields: Record<string, string>;
 }
 
-declare function discoverContextFiles(cwd: string): string[];
+declare function discoverContextFiles(cwd: string, agentDirs?: string[]): string[];
 
 interface ParsedFile {
     content: string;

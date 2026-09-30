@@ -43,5 +43,6 @@ function mergeConfig(overrides: Partial<Config>): Config {
     ignore: overrides.ignore ?? DEFAULT_CONFIG.ignore,
     agentDescriptionMinLength:
       overrides.agentDescriptionMinLength ?? DEFAULT_CONFIG.agentDescriptionMinLength,
+    agentDirs: overrides.agentDirs ?? DEFAULT_CONFIG.agentDirs,
   };
 }

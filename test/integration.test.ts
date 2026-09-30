@@ -61,6 +61,26 @@ describe('lint (integration)', () => {
     }
   });
 
+  it('auto-discovers custom agent files from a top-level agents/ dir', () => {
+    const dir = setup({
+      'agents/api-designer.agent.md': [
+        '---',
+        'name: api-designer',
+        'description: Designs REST and GraphQL APIs with a focus on developer experience and scalability.',
+        '---',
+        '',
+        '# API Designer',
+      ].join('\n'),
+    });
+    try {
+      const result = lint(dir);
+      expect(result.files).toHaveLength(1);
+      expect(result.files[0].file).toContain('api-designer.agent.md');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('lints specific files when provided', () => {
     const dir = setup({
       'CLAUDE.md': '# Project\n\nFollow best practices.',

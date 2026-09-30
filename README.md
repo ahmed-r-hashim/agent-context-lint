@@ -2,7 +2,7 @@
 
 Lint AI coding agent context files for staleness, broken paths, and semantic quality issues.
 
-Supports **CLAUDE.md**, **AGENTS.md**, **.cursorrules**, **copilot-instructions.md**, and **`*.agent.md`** custom-agent files (auto-discovered from `.github/agents/`).
+Supports **CLAUDE.md**, **AGENTS.md**, **.cursorrules**, **copilot-instructions.md**, and **`*.agent.md`** custom-agent files (auto-discovered from `.github/agents/` and `agents/` by default; configurable via `agentDirs`).
 
 ## Quickstart
 
@@ -88,9 +88,12 @@ Create `.agent-context-lint.json` in your project root, or add an `agentContextL
   "staleDateYears": 2,
   "vaguePatterns": ["follow best practices", "be careful", "use good judgment"],
   "ignore": [],
-  "agentDescriptionMinLength": 20
+  "agentDescriptionMinLength": 20,
+  "agentDirs": [".github/agents", "agents"]
 }
 ```
+
+`agentDirs` controls which directories are scanned for `*.agent.md` custom-agent files during auto-discovery (when no explicit files are passed on the command line). Defaults to both `.github/agents` and a top-level `agents/` folder; override to add or restrict to your repo's convention.
 
 ## Programmatic API
 

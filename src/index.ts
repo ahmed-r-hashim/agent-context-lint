@@ -57,7 +57,7 @@ export function lint(cwd: string, files?: string[]): LintResult {
   const targetFiles =
     files && files.length > 0
       ? files.map((f) => resolve(cwd, f))
-      : discoverContextFiles(cwd);
+      : discoverContextFiles(cwd, loadConfig(cwd).agentDirs);
 
   if (targetFiles.length === 0) {
     return { files: [], totalFindings: 0, errors: 0, warnings: 0 };

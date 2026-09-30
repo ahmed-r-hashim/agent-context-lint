@@ -68,7 +68,14 @@ function expandFileArg(cwd: string, arg: string): string[] {
 }
 
 function getGitHubActionInputs(): CLIOptions | null {
-  if (process.env.GITHUB_ACTIONS !== 'true') return null;
+  // GITHUB_ACTIONS is 'true' for every step in a GitHub Actions job, including
+  // plain `run:` steps that invoke this CLI directly (e.g. via npx). That is
+  // not a reliable signal that we're being invoked as the packaged action.
+  // GITHUB_ACTION_PATH, by contrast, is only set for the step that is
+  // actually executing a `uses:` action (JS or composite), so it correctly
+  // distinguishes "running as the packaged GitHub Action" from "running as a
+  // plain CLI inside some Actions job".
+  if (!process.env.GITHUB_ACTION_PATH) return null;
 
   const files = (process.env.INPUT_FILES || '').split(/\s+/).filter(Boolean);
   const format = process.env.INPUT_FORMAT === 'json' ? 'json' as const : 'text' as const;

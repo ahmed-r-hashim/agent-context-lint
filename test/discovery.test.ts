@@ -75,6 +75,41 @@ describe('discoverContextFiles', () => {
     }
   });
 
+  it('finds top-level agents/*.agent.md files by default', () => {
+    const dir = setup(['agents/api-designer.agent.md']);
+    try {
+      const files = discoverContextFiles(dir);
+      expect(files).toHaveLength(1);
+      expect(files[0]).toContain('api-designer.agent.md');
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('finds agent files across both default dirs at once', () => {
+    const dir = setup([
+      '.github/agents/agile-coach.agent.md',
+      'agents/api-designer.agent.md',
+    ]);
+    try {
+      const files = discoverContextFiles(dir);
+      expect(files).toHaveLength(2);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('respects a custom agentDirs override', () => {
+    const dir = setup(['custom-agents/my-agent.agent.md', 'agents/ignored.agent.md']);
+    try {
+      const files = discoverContextFiles(dir, ['custom-agents']);
+      expect(files).toHaveLength(1);
+      expect(files[0]).toContain('my-agent.agent.md');
+    } finally {
+      cleanup();
+    }
+  });
+
   it('does not error when .github/agents does not exist', () => {
     const dir = setup(['CLAUDE.md']);
     try {

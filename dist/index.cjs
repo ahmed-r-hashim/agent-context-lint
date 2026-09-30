@@ -439,7 +439,8 @@ var DEFAULT_CONFIG = {
     "ensure quality"
   ],
   ignore: [],
-  agentDescriptionMinLength: 20
+  agentDescriptionMinLength: 20,
+  agentDirs: [".github/agents", "agents"]
 };
 var CONTEXT_FILE_NAMES = [
   "CLAUDE.md",
@@ -449,7 +450,6 @@ var CONTEXT_FILE_NAMES = [
   ".github/copilot-instructions.md"
 ];
 var AGENT_FILE_SUFFIX = ".agent.md";
-var AGENT_AUTODISCOVER_DIR = ".github/agents";
 function isAgentFile(filePath) {
   return filePath.endsWith(AGENT_FILE_SUFFIX);
 }
@@ -486,14 +486,15 @@ function mergeConfig(overrides) {
     staleDateYears: overrides.staleDateYears ?? DEFAULT_CONFIG.staleDateYears,
     vaguePatterns: overrides.vaguePatterns ?? DEFAULT_CONFIG.vaguePatterns,
     ignore: overrides.ignore ?? DEFAULT_CONFIG.ignore,
-    agentDescriptionMinLength: overrides.agentDescriptionMinLength ?? DEFAULT_CONFIG.agentDescriptionMinLength
+    agentDescriptionMinLength: overrides.agentDescriptionMinLength ?? DEFAULT_CONFIG.agentDescriptionMinLength,
+    agentDirs: overrides.agentDirs ?? DEFAULT_CONFIG.agentDirs
   };
 }
 
 // src/discovery.ts
 var import_node_fs3 = require("fs");
 var import_node_path3 = require("path");
-function discoverContextFiles(cwd) {
+function discoverContextFiles(cwd, agentDirs = DEFAULT_CONFIG.agentDirs) {
   const found = [];
   for (const name of CONTEXT_FILE_NAMES) {
     const fullPath = (0, import_node_path3.resolve)(cwd, name);
@@ -501,12 +502,16 @@ function discoverContextFiles(cwd) {
       found.push(fullPath);
     }
   }
-  const agentsDir = (0, import_node_path3.resolve)(cwd, AGENT_AUTODISCOVER_DIR);
-  if ((0, import_node_fs3.existsSync)(agentsDir)) {
+  const seen = /* @__PURE__ */ new Set();
+  for (const dirName of agentDirs) {
+    const agentsDir = (0, import_node_path3.resolve)(cwd, dirName);
+    if (!(0, import_node_fs3.existsSync)(agentsDir)) continue;
     for (const entry of (0, import_node_fs3.readdirSync)(agentsDir)) {
-      if (entry.endsWith(AGENT_FILE_SUFFIX)) {
-        found.push((0, import_node_path3.resolve)(agentsDir, entry));
-      }
+      if (!entry.endsWith(AGENT_FILE_SUFFIX)) continue;
+      const fullPath = (0, import_node_path3.resolve)(agentsDir, entry);
+      if (seen.has(fullPath)) continue;
+      seen.add(fullPath);
+      found.push(fullPath);
     }
   }
   return found;
@@ -724,7 +729,7 @@ function lintFile(filePath, cwd) {
   };
 }
 function lint(cwd, files) {
-  const targetFiles = files && files.length > 0 ? files.map((f) => (0, import_node_path5.resolve)(cwd, f)) : discoverContextFiles(cwd);
+  const targetFiles = files && files.length > 0 ? files.map((f) => (0, import_node_path5.resolve)(cwd, f)) : discoverContextFiles(cwd, loadConfig(cwd).agentDirs);
   if (targetFiles.length === 0) {
     return { files: [], totalFindings: 0, errors: 0, warnings: 0 };
   }

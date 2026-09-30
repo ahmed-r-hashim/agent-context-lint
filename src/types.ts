@@ -34,6 +34,7 @@ export interface Config {
   vaguePatterns: string[];
   ignore: string[];
   agentDescriptionMinLength: number;
+  agentDirs: string[];
 }
 
 // Top-level `key: value` pairs from a --- delimited YAML frontmatter block;
@@ -66,6 +67,7 @@ export const DEFAULT_CONFIG: Config = {
   ],
   ignore: [],
   agentDescriptionMinLength: 20,
+  agentDirs: ['.github/agents', 'agents'],
 };
 
 export const CONTEXT_FILE_NAMES = [
@@ -77,6 +79,7 @@ export const CONTEXT_FILE_NAMES = [
 ];
 
 export const AGENT_FILE_SUFFIX = '.agent.md';
+// Kept for backwards compatibility; prefer Config.agentDirs (DEFAULT_CONFIG.agentDirs).
 export const AGENT_AUTODISCOVER_DIR = '.github/agents';
 
 export function isAgentFile(filePath: string): boolean {

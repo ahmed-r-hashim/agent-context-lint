@@ -1,6 +1,6 @@
 {
-  "name": "agent-context-lint",
-  "version": "0.2.0",
+  "name": "@corp-online/agent-context-lint",
+  "version": "0.3.0",
   "description": "Lint AI coding agent context files (AGENTS.md, CLAUDE.md, .cursorrules, copilot-instructions.md) for staleness, broken paths, and semantic quality issues.",
   "keywords": [
     "agents-md",
@@ -53,6 +53,6 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "agent-context-lint": "file:agent-context-lint-0.2.0.tgz"
+    "@corp-online/agent-context-lint": "^0.2.0"
   }
 }
